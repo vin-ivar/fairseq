@@ -101,6 +101,11 @@ class MaskedLMModel(FairseqEncoderModel):
         parser.add_argument('--encoder-normalize-before', action='store_true',
                             help='apply layernorm before each encoder block')
 
+        # Arguments related to freezing
+        parser.add_argument('--frozen', action='store_true', default=False)
+        parser.add_argument('--freeze-at', type=int, metavar='N', default=1000000)
+        parser.add_argument('--freeze-strategy', type=str, default='full_transformer')
+
     def forward(self, src_tokens, segment_labels=None, **kwargs):
         return self.encoder(src_tokens, segment_labels=segment_labels, **kwargs)
 

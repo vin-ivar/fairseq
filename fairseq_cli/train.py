@@ -219,6 +219,15 @@ def train(args, trainer, task, epoch_itr):
 
         # log mid-epoch stats
         num_updates = trainer.get_num_updates()
+        if num_updates >= args.freeze_at and not args.frozen:
+            args.frozen = True
+
+            # freeze entire transformer
+            if args.freeze_strategy == 'full_transformer':
+                for k, v in trainer.model.named_parameters():
+                    if k.startswith('encoder.sentence_encoder.layers'):
+                        v.requires_grad = False
+
         if num_updates % args.log_interval == 0:
             stats = get_training_stats(metrics.get_smoothed_values("train_inner"))
             progress.log(stats, tag="train_inner", step=num_updates)
