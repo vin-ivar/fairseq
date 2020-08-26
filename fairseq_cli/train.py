@@ -213,7 +213,13 @@ def train(args, trainer, task, epoch_itr):
         with metrics.aggregate("train_inner"), torch.autograd.profiler.record_function(
             "train_step-%d" % i
         ):
+            d_params = {k: v.data for k, v in trainer.model.named_parameters() if v.requires_grad}
             log_output = trainer.train_step(samples)
+            for k, v in trainer.model.named_parameters():
+                if not v.requires_grad or type(v.grad) == type(None):
+                    continue
+                d_params[k] = (v.data - d_params[k]) * v.grad
+
             if log_output is None:  # OOM, overflow, ...
                 continue
 
@@ -229,6 +235,12 @@ def train(args, trainer, task, epoch_itr):
                         v.requires_grad = False
 
         if num_updates % args.log_interval == 0:
+            # LCA
+            for k, v in d_params.items():
+                if 'layers' in k:
+                    metrics.log_scalar(k + '_mean', v.mean().item(), weight=0)
+                    metrics.log_scalar(k + '_sum', v.sum().item(), weight=0)
+
             stats = get_training_stats(metrics.get_smoothed_values("train_inner"))
             progress.log(stats, tag="train_inner", step=num_updates)
 
