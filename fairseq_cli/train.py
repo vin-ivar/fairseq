@@ -216,7 +216,7 @@ def train(args, trainer, task, epoch_itr):
             d_params = {k: v.data.clone() for k, v in trainer.model.named_parameters() if v.requires_grad}
             log_output = trainer.train_step(samples)
             for k, v in trainer.model.named_parameters():
-                if not v.requires_grad or type(v.grad) == type(None):
+                if not v.requires_grad or isinstance(v.grad, type(None)):
                     continue
                 d_params[k] = (v.data - d_params[k]) * v.grad
 
@@ -225,21 +225,28 @@ def train(args, trainer, task, epoch_itr):
 
         # log mid-epoch stats
         num_updates = trainer.get_num_updates()
-        if num_updates >= args.freeze_at and not args.frozen:
-            args.frozen = True
-
-            # freeze entire transformer
-            if args.freeze_strategy == 'full_transformer':
-                for k, v in trainer.model.named_parameters():
-                    if k.startswith('encoder.sentence_encoder.layers'):
-                        v.requires_grad = False
-
         if num_updates % args.log_interval == 0:
             # LCA
+            if 'encoder_attention_heads' in args:
+                n_heads = args.encoder_attention_heads
+            elif 'decoder_attention_heads' in args:
+                n_heads = args.decoder_attention_heads
+
+            keys_to_split = [k for k in d_params.keys() if 'weight' in k and
+                             any([i in k for i in ['q_proj', 'k_proj', 'v_proj']])]
+
             for k, v in d_params.items():
                 if 'layers' in k:
-                    metrics.log_scalar(k + '_mean', v.mean().item(), weight=0)
-                    metrics.log_scalar(k + '_sum', v.sum().item(), weight=0)
+                    if k in keys_to_split:
+                        embed_size = v.size(0)
+                        v = v.view(n_heads, n_heads // embed_size, embed_size)
+                        for n in range(n_heads):
+                            metrics.log_scalar(f'{k}_mean.head_{n}', v[n].mean().item(), weight=0)
+                            metrics.log_scalar(f'{k}_sum.head_{n}', v[n].sum().item(), weight=0)
+
+                    else:
+                        metrics.log_scalar(k + '_mean', v.mean().item(), weight=0)
+                        metrics.log_scalar(k + '_sum', v.sum().item(), weight=0)
 
             stats = get_training_stats(metrics.get_smoothed_values("train_inner"))
             progress.log(stats, tag="train_inner", step=num_updates)
