@@ -215,13 +215,10 @@ def train(args, trainer, task, epoch_itr):
         ):
             d_params = {k: v.data.clone() for k, v in trainer.model.named_parameters() if v.requires_grad}
             log_output = trainer.train_step(samples)
-            new_params = {k: v.data for k, v in trainer.model.named_parameters() if v.requires_grad}
-            print(torch.stack([(i == j).all() for (i, j) in zip(d_params.values(), new_params.values())]).all())
             for k, v in trainer.model.named_parameters():
                 if not v.requires_grad or type(v.grad) == type(None):
                     continue
                 d_params[k] = (v.data - d_params[k]) * v.grad
-
 
             if log_output is None:  # OOM, overflow, ...
                 continue
