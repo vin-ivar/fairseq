@@ -239,7 +239,7 @@ def train(args, trainer, task, epoch_itr):
                 if 'layers' in k:
                     if k in keys_to_split:
                         embed_size = v.size(0)
-                        v = v.view(n_heads, n_heads // embed_size, embed_size)
+                        v = v.view(n_heads, embed_size // n_heads, embed_size)
                         for n in range(n_heads):
                             metrics.log_scalar(f'{k}_mean.head_{n}', v[n].mean().item(), weight=0)
                             metrics.log_scalar(f'{k}_sum.head_{n}', v[n].sum().item(), weight=0)
