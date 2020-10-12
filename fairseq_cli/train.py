@@ -176,6 +176,10 @@ def tpu_data_loader(args, itr):
     )
 
 
+def name_map(name):
+    return
+
+
 @metrics.aggregate("train")
 def train(args, trainer, task, epoch_itr):
     """Train the model for one epoch and return validation losses."""
@@ -236,17 +240,19 @@ def train(args, trainer, task, epoch_itr):
                                  any([i in k for i in ['q_proj', 'k_proj', 'v_proj']])]
 
                 for k, v in d_params.items():
-                    if 'layers' in k:
-                        if k in keys_to_split:
-                            embed_size = v.size(0)
-                            v = v.view(n_heads, embed_size // n_heads, embed_size)
-                            for n in range(n_heads):
-                                metrics.log_scalar(f'{k}_mean.head_{n}', v[n].mean().item(), weight=0)
-                                metrics.log_scalar(f'{k}_sum.head_{n}', v[n].sum().item(), weight=0)
-
-                        else:
-                            metrics.log_scalar(k + '_mean', v.mean().item(), weight=0)
-                            metrics.log_scalar(k + '_sum', v.sum().item(), weight=0)
+                    if 'bias' in k:
+                        continue
+                    # if 'layers' in k:
+                    #     if k in keys_to_split:
+                    #         embed_size = v.size(0)
+                    #         v = v.view(n_heads, embed_size // n_heads, embed_size)
+                    #         for n in range(n_heads):
+                    #             metrics.log_scalar(f'{k}_mean.head_{n}', v[n].mean().item(), weight=0)
+                    #             metrics.log_scalar(f'{k}_sum.head_{n}', v[n].sum().item(), weight=0)
+                    #
+                    #     else:
+                    # metrics.log_scalar(k + '_mean', v.mean().item(), weight=0)
+                    metrics.log_scalar(k + '_sum', v.sum().item(), weight=0)
 
             stats = get_training_stats(metrics.get_smoothed_values("train_inner"))
             progress.log(stats, tag="train_inner", step=num_updates)
