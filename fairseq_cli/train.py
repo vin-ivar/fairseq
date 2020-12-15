@@ -229,6 +229,7 @@ def train(args, trainer, task, epoch_itr):
 
             # log mid-epoch stats
             num_updates = trainer.get_num_updates()
+            
             if num_updates % args.log_interval == 0:
                 # LCA
                 if 'encoder_attention_heads' in args:
@@ -242,18 +243,9 @@ def train(args, trainer, task, epoch_itr):
                 for k, v in d_params.items():
                     if 'bias' in k:
                         continue
-                    # if 'layers' in k:
-                    #     if k in keys_to_split:
-                    #         embed_size = v.size(0)
-                    #         v = v.view(n_heads, embed_size // n_heads, embed_size)
-                    #         for n in range(n_heads):
-                    #             metrics.log_scalar(f'{k}_mean.head_{n}', v[n].mean().item(), weight=0)
-                    #             metrics.log_scalar(f'{k}_sum.head_{n}', v[n].sum().item(), weight=0)
-                    #
-                    #     else:
-                    # metrics.log_scalar(k + '_mean', v.mean().item(), weight=0)
                     metrics.log_scalar(k + '_sum', v.sum().item(), weight=0)
-
+                    metrics.log_scalar(k + '_mean', v.mean().item(), weight=0)
+            
             stats = get_training_stats(metrics.get_smoothed_values("train_inner"))
             progress.log(stats, tag="train_inner", step=num_updates)
 
